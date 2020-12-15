@@ -130,22 +130,6 @@ def colision_part_2(obj_1, obj_2):
         lambda_1 = (2*r_p-(vp.mag(obj_1.pos-obj_2.pos)))/(vp.mag(obj_1.vel))
         obj_1.pos = obj_1.pos + lambda_1*obj_1.vel
 
-def dinamica(objetos):
-    while t<10:
-        vp.rate(250)
-        for particula in particulas:
-            particula.pos = particula.pos + dt * particula.vel
-            for i in particulas:
-                if i != particula:
-                    colision_part_2(particula, i)
-            rebote_particula_caja(particula)
-        camino.append(pos = particulas[0].pos)
-        #mediciones
-        K = mediciones(particulas)
-        energia_kin_en_cada_tiempo.append(K)
-        tiempo.append(t)
-        t=t+dt
-
 condiciones = codiciones_iniciales(cond_ini_def)
 particulas = condiciones.particulas_pos_vel()
 
