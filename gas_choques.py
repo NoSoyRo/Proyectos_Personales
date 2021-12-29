@@ -126,16 +126,26 @@ def calculo_dts_a_evento_i(lista_de_parts, lx, ly):
         vx,vy,rx,ry,r = i.v[0],i.v[1],i.p[0],i.p[1],i.r
         if vy>0: #vy
             i.dt_techo = (ly-r-ry)/(vy)
-        if vy<0: #vy
+            i.dt_suelo = float("inf")
+            print(i.dt_techo)
+        elif vy<0: #vy
             i.dt_suelo = (-ly+r-ry)/(vy)
+            i.dt_techo = float("inf")
+            print(i.dt_suelo)
         if vx<0: #vx
+            print("uso vx<0")
             i.dt_paredizq = (-lx+r-rx)/(vx)
-        if vx>0: #vx
+            i.dt_paredder = float("inf")
+            print(rx,i.dt_paredizq)
+        elif vx>0: #vx
+            print("uso vx>0")
             i.dt_paredder = (lx-r-rx)/(vx)
+            i.dt_paredizq = float("inf")
+            print(rx,i.dt_paredder)
         if vy == 0:
             i.dt_techo = float('inf')
             i.dt_suelo = float('inf')
-        if vx == 0:
+        elif vx == 0:
             i.dt_paredder = float('inf')
             i.dt_paredizq = float('inf')
         ind_i = lista_de_parts.index(i)
@@ -146,12 +156,16 @@ def calculo_dts_a_evento_i(lista_de_parts, lx, ly):
             lista_de_parts[ind_j].dt_particula[ind_i] = dt_ij
 
 class minimo():
-    def __init__(self,valor,de_particula,de_pared):
+    def __init__(self,valor,de_particula,dpi,dpd,ds,dtch):
         self.valor = valor
-        self.de_pared = de_pared
+        self.dpi = dpi
+        self.dpd = dpd
+        self.ds  = ds
+        self.dtch= dtch
         self.de_particula = de_particula
+        
 
-def encuentra_dt_min(lista_de_parts):
+def encuentra_dt_min(lista_de_parts): # dt_part, dpi, dpd, ds, dtch
     dt_minimo_de_cada_particula_objs = []
     dt_minimo_de_cada_particula = []
     for i in lista_de_parts:
@@ -159,10 +173,18 @@ def encuentra_dt_min(lista_de_parts):
         min_dts_pared_part_i = min(dts_pared_part_i)
         min_dts_parts_part_i = min(i.dt_particula)
         min_tot_i = min([min_dts_pared_part_i,min_dts_parts_part_i])
-        if min_tot_i == min_dts_pared_part_i:
-            minobj = minimo(min_tot_i,False,True)
-        else:
-            minobj = minimo(min_tot_i,True,False)
+        if min_tot_i == i.dt_techo:
+            minobj = minimo(min_tot_i,False,False,False,False,True)
+            print("minimo de techo")
+        elif min_tot_i == i.dt_suelo:
+            minobj = minimo(min_tot_i,False,False,False,True,False)
+            print("minimo de suelo")
+        elif min_tot_i == i.dt_paredder:
+            minobj = minimo(min_tot_i,False,False,True,False,False)
+        elif min_tot_i == i.dt_paredizq:
+            minobj = minimo(min_tot_i,False,True,False,False,False)
+        elif min_tot_i == min_dts_parts_part_i:
+            minobj = minimo(min_tot_i,True,False,False,False,False)
         dt_minimo_de_cada_particula_objs.append(minobj) #<---
         dt_minimo_de_cada_particula.append(minobj.valor)#<---
     minimo_dt_total = min(dt_minimo_de_cada_particula)
@@ -175,64 +197,71 @@ def encuentra_dt_min(lista_de_parts):
     return(dt_minimo_de_cada_particula_objs,minimo_dt_total,Lista_indicial_de_particulas_con_mismo_minimo_de_dt)
 
 def cambio_de_velocidad_por_choque_entre_particulas(obj1,obj2):
-    t1 = (2*obj2.m)/(obj1.m+obj2.m)
-    t2 = (2*obj1.m)/(obj1.m+obj2.m)
-    k1 = (np.dot(obj1.v-obj2.v,obj1.p-obj2.p))/(lng.norm(obj1.p-obj2.p)**2)
-    k2 = (np.dot(obj2.v-obj1.v,obj2.p-obj1.p))/(lng.norm(obj2.p-obj1.p)**2)
-    obj1.v = obj1.v - t1*k1*(obj1.p-obj2.p)
-    obj2.v = obj2.v - t2*k2*(obj2.p-obj1.p)
+    drx = obj2.p[0]-obj1.p[0]
+    dry = obj2.p[1]-obj1.p[1]
+    sigma = obj1.r+obj2.r
+    dvdr = (obj2.v[0]-obj1.v[0])*(obj2.p[0]-obj1.p[0])+(obj2.v[1]-obj1.v[1])*(obj2.p[1]-obj1.p[1])
+    J = (2*obj1.m*obj2.m*dvdr)/(sigma*(obj1.m+obj2.m))
+    Jx = J*drx/sigma
+    Jy = J*dry/sigma
+    obj1.v[0] = obj1.v[0] + Jx/obj1.m
+    obj1.v[1] = obj1.v[1] + Jy/obj1.m
+    obj2.v[0] = obj2.v[0] - Jx/obj2.m
+    obj2.v[1] = obj2.v[1] - Jy/obj2.m
+    
+def c_d_v_p_p_i(obj):
+    obj.v = np.array([-obj.v[0],obj.v[1]])
+def c_d_v_p_p_d(obj):
+    obj.v = np.array([-obj.v[0],obj.v[1]])
+def c_d_v_p_p_s(obj):
+    obj.v = np.array([obj.v[0],-obj.v[1]])
+def c_d_v_p_p_t(obj):
+    obj.v = np.array([obj.v[0],-obj.v[1]])
 
-def cambio_de_velocidad_por_choque_con_paredes(obj,lx,ly):
-    dxizquierda = np.abs(-lx-obj.p[0])
-    dxderecha   = np.abs(lx-obj.p[0])
-    dytecho     = np.abs(-ly-obj.p[1])
-    dysuelo     = np.abs(ly-obj.p[1])
-    minimo = min(dxizquierda,dxderecha,dytecho,dysuelo)
-    if minimo == dxizquierda:
-        obj.v = np.array([-obj.v[0],obj.v[1]])
-    elif minimo == dxderecha:
-        obj.v = np.array([-obj.v[0],obj.v[1]])
-    elif minimo == dytecho:
-        obj.v = np.array([obj.v[0],-obj.v[1]])
-    elif minimo == dysuelo:
-        obj.v = np.array([obj.v[0],-obj.v[1]])
-
-
-def dinamica(np,lx,ly,vx,vy,m,r,tf):
-    Particulas = gen_n_parts(np,lx,ly,vx,vy,m,r)
-    t=0
-    dta = .1
+def dinamica(nparts,lx,ly,vx,vy,m,r,tf):
+    Particulas = gen_n_parts(nparts,lx,ly,vx,vy,m,r)
+    #Particulas = [p(np.array([0,0]),np.array([1,0]),1,1)]
+    global t
+    global dta 
+    t = 0
+    dta = 1
     X = []
     Y = []
+    T = []
     while t<tf:
         calculo_dts_a_evento_i(Particulas,lx,ly)
         L1,mindt,L3 = encuentra_dt_min(Particulas)
-        t_0 = t
-        while t<t_0+mindt:
+        t_0 = t + mindt
+        print(t_0, mindt)
+        while t<t_0:
             for i in Particulas:
                 i.p = i.p + dta*i.v
                 X.append(i.p[0])
                 Y.append(i.p[1])
             t+=dta
-            print(t)
-        t+=dta
-        print(L3)
+            #print(t)
+            T.append(t)
+        #print(L3)
         for i in L3:
-            if L1[i].de_pared:
-                print(L1[i].de_pared)
-                cambio_de_velocidad_por_choque_con_paredes(Particulas[i],lx,ly)
+            if L1[i].dpi:
+                print("de pared izq")
+                c_d_v_p_p_i(Particulas[i])
+            elif L1[i].dpd:
+                print("de pared der")
+                c_d_v_p_p_d(Particulas[i])
+            elif L1[i].ds:
+                print("de pared suelo")
+                c_d_v_p_p_s(Particulas[i])
+            elif L1[i].dtch:
+                print("de pared techo")
+                c_d_v_p_p_t(Particulas[i])
             elif L1[i].de_particula:
-                for j in L3:
-                    if L1[j].de_particula:
-                        cambio_de_velocidad_por_choque_entre_particulas(Particulas[i],Particulas[j])
-                    print("oa2")
-    return(X,Y)
+                    cambio_de_velocidad_por_choque_entre_particulas(Particulas[0],Particulas[1])
+                    print("de particula")
+    return(X,Y,T)
 
-X,Y = dinamica(2,5,5,3,3,1,1,100)
-plt.scatter(X,Y)
+X,Y,T = dinamica(2,5,5,3,3,1,1,100)
+plt.plot(X,Y)
 plt.show()
-
-
-    
-
-    
+plt.plot(T,X)
+plt.show()
