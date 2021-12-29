@@ -127,21 +127,21 @@ def calculo_dts_a_evento_i(lista_de_parts, lx, ly):
         if vy>0: #vy
             i.dt_techo = (ly-r-ry)/(vy)
             i.dt_suelo = float("inf")
-            print(i.dt_techo)
+            #print(i.dt_techo)
         elif vy<0: #vy
             i.dt_suelo = (-ly+r-ry)/(vy)
             i.dt_techo = float("inf")
-            print(i.dt_suelo)
+            #print(i.dt_suelo)
         if vx<0: #vx
-            print("uso vx<0")
+            #print("uso vx<0")
             i.dt_paredizq = (-lx+r-rx)/(vx)
             i.dt_paredder = float("inf")
-            print(rx,i.dt_paredizq)
+            #print(rx,i.dt_paredizq)
         elif vx>0: #vx
-            print("uso vx>0")
+            #print("uso vx>0")
             i.dt_paredder = (lx-r-rx)/(vx)
             i.dt_paredizq = float("inf")
-            print(rx,i.dt_paredder)
+            #print(rx,i.dt_paredder)
         if vy == 0:
             i.dt_techo = float('inf')
             i.dt_suelo = float('inf')
@@ -175,10 +175,10 @@ def encuentra_dt_min(lista_de_parts): # dt_part, dpi, dpd, ds, dtch
         min_tot_i = min([min_dts_pared_part_i,min_dts_parts_part_i])
         if min_tot_i == i.dt_techo:
             minobj = minimo(min_tot_i,False,False,False,False,True)
-            print("minimo de techo")
+            #print("minimo de techo")
         elif min_tot_i == i.dt_suelo:
             minobj = minimo(min_tot_i,False,False,False,True,False)
-            print("minimo de suelo")
+            #print("minimo de suelo")
         elif min_tot_i == i.dt_paredder:
             minobj = minimo(min_tot_i,False,False,True,False,False)
         elif min_tot_i == i.dt_paredizq:
@@ -197,18 +197,17 @@ def encuentra_dt_min(lista_de_parts): # dt_part, dpi, dpd, ds, dtch
     return(dt_minimo_de_cada_particula_objs,minimo_dt_total,Lista_indicial_de_particulas_con_mismo_minimo_de_dt)
 
 def cambio_de_velocidad_por_choque_entre_particulas(obj1,obj2):
-    drx = obj2.p[0]-obj1.p[0]
-    dry = obj2.p[1]-obj1.p[1]
-    sigma = obj1.r+obj2.r
-    dvdr = (obj2.v[0]-obj1.v[0])*(obj2.p[0]-obj1.p[0])+(obj2.v[1]-obj1.v[1])*(obj2.p[1]-obj1.p[1])
-    J = (2*obj1.m*obj2.m*dvdr)/(sigma*(obj1.m+obj2.m))
-    Jx = J*drx/sigma
-    Jy = J*dry/sigma
-    obj1.v[0] = obj1.v[0] + Jx/obj1.m
-    obj1.v[1] = obj1.v[1] + Jy/obj1.m
-    obj2.v[0] = obj2.v[0] - Jx/obj2.m
-    obj2.v[1] = obj2.v[1] - Jy/obj2.m
-    
+    dr12 = obj1.p-obj2.p
+    dr21 = -obj1.p+obj2.p
+    dv12 = obj1.v-obj2.v
+    dv21 = -obj1.v+obj2.v
+    t1 = 2*obj2.m/(obj1.m+obj2.m)
+    t2 = 2*obj1.m/(obj1.m+obj2.m)
+    k1 = (np.dot(dv12,dr12))/(np.dot(dr12,dr12))
+    k2 = (np.dot(dv21,dr21))/(np.dot(dr21,dr21))
+    obj1.v = obj1.v-t1*k1*dr12
+    obj2.v = obj2.v-t2*k2*dr21
+
 def c_d_v_p_p_i(obj):
     obj.v = np.array([-obj.v[0],obj.v[1]])
 def c_d_v_p_p_d(obj):
@@ -218,50 +217,95 @@ def c_d_v_p_p_s(obj):
 def c_d_v_p_p_t(obj):
     obj.v = np.array([obj.v[0],-obj.v[1]])
 
-def dinamica(nparts,lx,ly,vx,vy,m,r,tf):
-    Particulas = gen_n_parts(nparts,lx,ly,vx,vy,m,r)
-    #Particulas = [p(np.array([0,0]),np.array([1,0]),1,1)]
+def dinamica(Particulas,tf,lx,ly):
+    #Particulas = gen_n_parts(nparts,lx,ly,vx,vy,m,r)
+    nparts = len(Particulas)
     global t
     global dta 
     t = 0
-    dta = 1
-    X = []
-    Y = []
+    dta = 0.1
+    PosicionesDeParticulas = []
+    VelocidadesDeParticulas = []
     T = []
+    for i in range(nparts):
+        PosicionesDeParticulas.append([])
+        VelocidadesDeParticulas.append([])
     while t<tf:
         calculo_dts_a_evento_i(Particulas,lx,ly)
         L1,mindt,L3 = encuentra_dt_min(Particulas)
         t_0 = t + mindt
-        print(t_0, mindt)
+        #print(t_0, mindt)
         while t<t_0:
             for i in Particulas:
+                ind_i = Particulas.index(i)
                 i.p = i.p + dta*i.v
-                X.append(i.p[0])
-                Y.append(i.p[1])
+                PosicionesDeParticulas[ind_i].append(i.p)
+                VelocidadesDeParticulas[ind_i].append(i.v)
             t+=dta
             #print(t)
             T.append(t)
         #print(L3)
         for i in L3:
             if L1[i].dpi:
-                print("de pared izq")
+                #print("de pared izq")
                 c_d_v_p_p_i(Particulas[i])
             elif L1[i].dpd:
-                print("de pared der")
+                #print("de pared der")
                 c_d_v_p_p_d(Particulas[i])
             elif L1[i].ds:
-                print("de pared suelo")
+                #print("de pared suelo")
                 c_d_v_p_p_s(Particulas[i])
             elif L1[i].dtch:
-                print("de pared techo")
+                #print("de pared techo")
                 c_d_v_p_p_t(Particulas[i])
-            elif L1[i].de_particula:
-                    cambio_de_velocidad_por_choque_entre_particulas(Particulas[0],Particulas[1])
-                    print("de particula")
-    return(X,Y,T)
+        if L1[0].de_particula:
+            cambio_de_velocidad_por_choque_entre_particulas(Particulas[L3[0]],Particulas[L3[1]])
+            print("de particula", Particulas[L3[0]].v,Particulas[L3[1]].v)
+            
+    return(PosicionesDeParticulas, VelocidadesDeParticulas, T)
 
-X,Y,T = dinamica(2,5,5,3,3,1,1,100)
-plt.plot(X,Y)
+def regresax_y_y(Pos, indice):
+    X = []
+    Y = []
+    for i in Pos[indice]:
+        X.append(i[0])
+        Y.append(i[1])
+    return(X,Y)
+
+Particulas = gen_n_parts(3,5,5,1,1,1,1)
+grafica_en_mpl(Particulas, 5,5)
+
+Pos,Vel,T = dinamica(Particulas,10,5,5)
+
+XP1,YP1 = regresax_y_y(Pos,0)
+XP2,YP2 = regresax_y_y(Pos,1)
+XP3,YP3 = regresax_y_y(Pos,2)
+plt.plot(T,XP1)
+plt.plot(T,YP1)
+plt.plot(T,XP2)
+plt.plot(T,YP2)
 plt.show()
-plt.plot(T,X)
+plt.plot(XP1,YP1)
+plt.plot(XP2,YP2)
+plt.plot(XP3,YP3)
 plt.show()
+
+#############prueba de particulas específicas
+
+#Particulas = [p(np.array([-2,0]),np.array([1,1]),1,1),
+ #   p(np.array([2,0]),np.array([-1,1]),1,0.5),
+  #  p(np.array([2,-2]),np.array([-1,1]),1,0.5),
+   # p(np.array([2,-2]),np.array([-1,1]),1,0.5)]
+
+#############
+
+#############simulacion vpython
+
+#P1 = vp.sphere(pos = vp.vector(XP1[0],YP1[1],0) ,radius = 1)
+#P2 = vp.sphere(pos = vp.vector(XP2[0],YP2[1],0) ,radius = 1)
+
+#for i in range(len(T[1:])):
+ #   vp.rate(50)
+  #  P1.pos = vp.vector(XP1[i],YP1[i],0)
+   # P2.pos = vp.vector(XP2[i],YP2[i],0)
+#############
