@@ -1,8 +1,8 @@
 import numpy as np
 
 class particula():
-    def __init__(self, m, p, vn, va, r, identificador):
-        self.m, self.p, self.vn, self.va, self.r, self.idx = m,p,vn,va,r,identificador
+    def __init__(self, m, p, v, r, identificador):
+        self.m, self.p, self.v, self.r, self.idx = m,p,v,r,identificador
     def __str__(self):
         return(f'{self.p}')
 
@@ -42,46 +42,59 @@ def Arbol2D(listauwu, profundidad: int = 0):
                 izquierda = Arbol2D(lista[:media]  , profundidad+1),
                 derecha   = Arbol2D(lista[media+1:], profundidad+1)))
 
-#Funcionq ue solo altera la velocidad nueva de la spartículas usando las velocidades antiguas de las partículas.
+#Funcionq ue solo altera la velocidad nuev de la spartículas usando las velocidades antiguas de las partículas.
 
-def cambio_de_velocidad_por_choque_entre_particulas(obj1: particula, obj2: particula):
-    vec = (obj2.r+obj1.r)*vunit_12(obj1.p,obj2.p) 
-    drx = vec[0] 
-    dry = vec[1]
-    dvx = obj2.va[0]-obj1.va[0]
-    dvy = obj2.va[1]-obj1.va[1]
-    sigma = obj1.r+obj2.r
-    dvdr = (obj2.va[0]-obj1.va[0])*(drx)+(obj2.va[1]-obj1.va[1])*(dry)
-    J = (2*obj1.m*obj2.m*dvdr)/(sigma*(obj1.m+obj2.m))
-    Jx = J*drx/sigma
-    Jy = J*dry/sigma
-    print(f"""              +++ Elementos de la ecuación: \n                  
-                                   | drx | {drx} \n
-                                   | dry | {dry} \n
-                                   | dvx | {dvx} \n
-                                   | dvy | {dvy} \n
-                                   | sig | {sigma} \n
-                                   | dvdr| {dvdr} \n
-                                   | J   | {J} \n
-                                   | Jx  | {Jx} \n
-                                   | Jy  | {Jy} \n""")
-    return(np.array([obj1.va[0] + Jx/obj1.m, obj1.va[1] + Jy/obj1.m]))
+def dtt(obj1, obj2):
+    dr   = obj2.p-obj1.p
+    dv   = obj2.v-obj1.v
+    drdr = dr[0]**2 + dr[1]**2
+    dvdv = dv[0]**2 + dv[1]**2
+    dvdr = ((dv[0])*(dr[0])) + ((dv[1])*(dr[1]))
+    d    = (dvdr)**2 - (dvdv)*(drdr-(obj1.r+obj2.r)**2)
+    dt   = -(((dvdr)+((d)**0.5))/(dvdv))
+    return( dt )
+
+def cambio_de_velocidad_por_choque_entre_particulas(obj1: particula, obj2: particula, dt):
+    print(f'            posiciones iniciales de {obj1.idx} es: {obj1.p}, de {obj2.idx} es: {obj2.p}')
+    obj1.p = obj1.p - dt*obj1.v
+    obj2.p = obj2.p - dt*obj2.v
+    print(f'            posiciones finales de {obj1.idx} es: {obj1.p}, de {obj2.idx} es: {obj2.p}')
+    deltat = dtt(obj1, obj2)
+    # print(f'            el tiempo que tarda en llegar a ser tangenciales es: {dt} - {deltat} = {dt-deltat}')
+    obj1.p = obj1.p + deltat*obj1.v
+    obj2.p = obj2.p + deltat*obj2.v
+    ### ya tenemos todo cool
+    dr   = obj2.p-obj1.p
+    dv   = obj2.v-obj1.v
+    dvdr = ((dv[0])*(dr[0])) + ((dv[1])*(dr[1]))
+    j = (2*obj1.m*obj2.m*(dvdr))/((obj1.r+obj2.r)*(obj1.m+obj2.m))
+    jx = j * dr[0] / (obj1.r+obj2.r)
+    jy = j * dr[1] / (obj1.r+obj2.r)
+    print(f'            velocidades iniciales de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}')
+    obj1.v[0] = obj1.v[0] + jx / obj1.m
+    obj1.v[1] = obj1.v[1] + jy / obj1.m
+    obj2.v[0] = obj2.v[0] - jx / obj2.m
+    obj2.v[1] = obj2.v[1] - jy / obj2.m
+    print(f'            velocidades finales de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}')
+    tiempo_restante = dt - deltat
+    obj1.p = obj1.p + tiempo_restante * obj1.v
+    obj2.p = obj2.p + tiempo_restante * obj2.v
+
+def cambia_la_posicion(obj1: particula, dt_para_tangencial):
+    obj1.p = obj1.p + dt_para_tangencial * obj1.v
 
 def cambio_de_velocidad_por_choque_con_pared(parti: particula,lx,ly):
     if (lx-parti.p[0] < parti.r) and (parti.p[0] > 0):
-        print('             1: cambié la vel porque: ', (lx-parti.p[0] < parti.r), (parti.p[0] > 0), parti.p[0], lx-parti.p[0], parti.r, lx)
-        parti.vn[0] = -parti.vn[0]
+        parti.v[0] = -parti.v[0]
+
     if (parti.p[0]+lx < parti.r) and (parti.p[0] < 0):
-        print('             2: cambié la vel porque: ', (parti.p[0]+lx < parti.r), (parti.p[0] < 0), parti.p[0], parti.p[0]-lx, parti.r, lx)
-        parti.vn[0] = -parti.vn[0]
+        parti.v[0] = -parti.v[0]
         
     if (ly-parti.p[1] < parti.r) and (parti.p[1] > 0):
-        print('             3: cambié la vel porque: ', (ly-parti.p[1] < parti.r), (parti.p[1] > 0), parti.p[1], ly-parti.p[1], parti.r, ly)
-        parti.vn[1] = -parti.vn[1]
+        parti.v[1] = -parti.v[1]
         
     if (parti.p[1]+ly < parti.r) and (parti.p[1] > 0):
-        print('             4 :cambié la vel porque: ', (parti.p[1]+ly < parti.r), (parti.p[1] > 0), parti.p[1], parti.p[1]-ly, parti.r, ly)
-        parti.vn[1] = -parti.vn[1]   
+        parti.v[1] = -parti.v[1]   
         
 
 def redaccion_de_texto(lista):
@@ -89,7 +102,7 @@ def redaccion_de_texto(lista):
     vel = open('velocidades.txt','a')
     for i in lista:
         pos.write('('+str(tuple(i.p)[0])+';'+str(tuple(i.p)[1])+';'+str(i.idx)+')'+',')
-        vel.write('('+str(tuple(i.vn)[0])+';'+str(tuple(i.vn)[1])+';'+str(i.idx)+')'+',')
+        vel.write('('+str(tuple(i.v)[0])+';'+str(tuple(i.v)[1])+';'+str(i.idx)+')'+',')
     pos.write('\n')
     vel.write('\n')
     pos.close()
@@ -111,7 +124,6 @@ def Arbol2D_BPT(raiz: nodo, punto: particula, L, p = 0, k = 2):
     else:
         sb = raiz.d
         ob = raiz.i
-    # print(f"""      La distancia es: {dist(raiz.part.p,punto.p)} | la suma de radios: {(raiz.part.r + punto.r)}""")
     if (dist(raiz.part.p,punto.p)<(raiz.part.r + punto.r)) and ((raiz.part.p != punto.p).any()): #una vez terminado el código implementar aquí el cpálculo de la velocidad final
         L.append(raiz.part)
     
@@ -129,37 +141,18 @@ class experimento():
         self.dt = dt
         for i in range(num_de_pasos):
             arbol = Arbol2D(self.lp, 0)
-            redaccion_de_texto(self.lp)
             print(f'tiempo: {i}')
             ### El siguiente es un 
             for j in self.lp:
-                print(f'    +partícula: {j.idx}', f'||| con velocidad: {j.vn}')
+                print(f'    +partícula: {j.idx} ||| con posicion {j.p} ||| con velocidad: {j.v}')
                 #lista particulas que chocan con j, nota que no uso la lsita pero puede servir para saber con cuantas partículas choca en un mismo tiempo
                 listapqchcj = Arbol2D_BPT(arbol,j,[])
-                vel_nueva_j = np.array([0,0])
                 for k in listapqchcj:
-                    vel_vieja = vel_nueva_j
-                    vel_nueva_j = vel_nueva_j + cambio_de_velocidad_por_choque_entre_particulas(j,k)
-                    print(f"             +++Velocidad cambiada por colisión: {vel_nueva_j-vel_vieja}")
-                if len(listapqchcj) == 0:
-                    j.vn = j.va
-                else:
-                    j.vn = vel_nueva_j
-                print(f'         ++la posición de la partícula   {j.idx}: ', j.p, '\n',
-                      f'        ++la velocidad de la partícula {j.idx}: ', j.vn, '\n',
-                      f'        ++las partículas con las que choca son: ', len(listapqchcj))
+                    print(f'        ++ Lista de particulas que chocan: {[(i.p,i.idx) for i in listapqchcj]}')
+                    cambio_de_velocidad_por_choque_entre_particulas(j,k,self.dt)
                 cambio_de_velocidad_por_choque_con_pared(j, self.lx, self.ly)
-
+            #despues de todos los cambios por colisiones redacto el csv
+            redaccion_de_texto(self.lp)
             for k in self.lp:
-                k.va = k.vn
-                k.p = k.p + self.dt*k.vn
-            
-########## TESTEO ##########
-
-# L = [particula(1,np.array((4,3)),np.array((7, 2)),np.array((7, 2)),1), 
-#      particula(1,np.array((5,4)),np.array((7, 2)),np.array((7, 2)),1), 
-#      particula(1,np.array((4,4)),np.array((7, 2)),np.array((7, 2)),0.5)] 
-
-# arbolito = Arbol2D(L)
-# lista = Arbol2D_BPT(arbolito, particula(1,np.array((5,4)),np.array((7, 2)),np.array((7, 2)),1), [])
-# print(*lista)
+                k.p = k.p + self.dt*k.v   ### aqui solo cambio las posiciones con las posiciones debidas a un potencial!!!! ueuwuwuwuwuwuuwuwuwuw
+                
