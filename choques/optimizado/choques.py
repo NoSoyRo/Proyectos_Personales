@@ -60,25 +60,32 @@ def cambio_de_velocidad_por_choque_entre_particulas(obj1: particula, obj2: parti
     obj2.p = obj2.p - dt*obj2.v
     print(f'            posiciones finales de {obj1.idx} es: {obj1.p}, de {obj2.idx} es: {obj2.p}')
     deltat = dtt(obj1, obj2)
-    # print(f'            el tiempo que tarda en llegar a ser tangenciales es: {dt} - {deltat} = {dt-deltat}')
+    print(f'            el tiempo que tarda en llegar a ser tangenciales es: {deltat}')
     obj1.p = obj1.p + deltat*obj1.v
     obj2.p = obj2.p + deltat*obj2.v
+    print(f'            posiciones previas al choque: {obj1.p, obj2.p}')
     ### ya tenemos todo cool
-    dr   = obj2.p-obj1.p
-    dv   = obj2.v-obj1.v
-    dvdr = ((dv[0])*(dr[0])) + ((dv[1])*(dr[1]))
-    j = (2*obj1.m*obj2.m*(dvdr))/((obj1.r+obj2.r)*(obj1.m+obj2.m))
-    jx = j * dr[0] / (obj1.r+obj2.r)
-    jy = j * dr[1] / (obj1.r+obj2.r)
-    print(f'            velocidades iniciales de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}')
-    obj1.v[0] = obj1.v[0] + jx / obj1.m
-    obj1.v[1] = obj1.v[1] + jy / obj1.m
-    obj2.v[0] = obj2.v[0] - jx / obj2.m
-    obj2.v[1] = obj2.v[1] - jy / obj2.m
-    print(f'            velocidades finales de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}')
+    # dr   = obj2.p-obj1.p
+    # dv   = obj2.v-obj1.v
+    # dvdr = ((dv[0])*(dr[0])) + ((dv[1])*(dr[1]))
+    # j = (2*obj1.m*obj2.m*(dvdr))/((obj1.r+obj2.r)*(obj1.m+obj2.m))
+    # jx = j * dr[0] / (obj1.r+obj2.r)
+    # jy = j * dr[1] / (obj1.r+obj2.r)
+    print(f'            velocidades antes de choque de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}')
+    # obj1.v[0] = obj1.v[0] + jx / obj1.m
+    # obj1.v[1] = obj1.v[1] + jy / obj1.m
+    # obj2.v[0] = obj2.v[0] - jx / obj2.m
+    # obj2.v[1] = obj2.v[1] - jy / obj2.m
+    sigma = obj1.m + obj2.m
+    num1 = np.dot(obj1.v-obj2.v, obj1.p-obj2.p)
+    num2 = np.dot(obj2.v-obj1.v, obj2.p-obj1.p)
+    obj1.v = obj1.v - (2*obj2.m/(sigma))*((num1)/(dist(obj1.p,obj2.p)**2))*(obj1.p-obj2.p)
+    obj2.v = obj2.v - (2*obj1.m/(sigma))*((num2)/(dist(obj2.p,obj1.p)**2))*(obj2.p-obj1.p)
+    print(f'            velocidades despues de choque de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}')
     tiempo_restante = dt - deltat
     obj1.p = obj1.p + tiempo_restante * obj1.v
     obj2.p = obj2.p + tiempo_restante * obj2.v
+    print(f'            posiciones corregidas: {obj1.p, obj2.p}')
 
 def cambia_la_posicion(obj1: particula, dt_para_tangencial):
     obj1.p = obj1.p + dt_para_tangencial * obj1.v
