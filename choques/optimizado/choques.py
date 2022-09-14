@@ -93,16 +93,16 @@ def cambia_la_posicion(obj1: particula, dt_para_tangencial):
 def cambio_de_velocidad_por_choque_con_pared(parti: particula,lx,ly):
     if (lx-parti.p[0] < parti.r) and (parti.p[0] > 0):
         parti.v[0] = -parti.v[0]
-
+        print("         ¡CHOQUE CON PARED DERECHA!")
     if (parti.p[0]+lx < parti.r) and (parti.p[0] < 0):
         parti.v[0] = -parti.v[0]
-        
+        print("         ¡CHOQUE CON PARED IZQUIERDA!")
     if (ly-parti.p[1] < parti.r) and (parti.p[1] > 0):
         parti.v[1] = -parti.v[1]
-        
-    if (parti.p[1]+ly < parti.r) and (parti.p[1] > 0):
+        print("         ¡CHOQUE CON TECHO!")
+    if (parti.p[1]+ly < parti.r) and (parti.p[1] < 0):
         parti.v[1] = -parti.v[1]   
-        
+        print("         ¡CHOQUE CON SUELO!")
 
 def redaccion_de_texto(lista):
     pos = open('posiciones.txt','a')
