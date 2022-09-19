@@ -12,7 +12,7 @@ lx          = 52
 ly          = 7
 idx         = 0
 L           = []
-masas       = np.linspace(0,1,100)         ### ULTRA PENDEJO LAS MASAS NO PUEDEN SER NEGATIVAS >:V
+masas       = np.linspace(0,1,100)        
 velocidades = np.linspace(-1,1,100)
 for i in range(-50,50,10):
      for j in range(-5,5,1):
