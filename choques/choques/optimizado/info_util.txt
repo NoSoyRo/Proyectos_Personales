@@ -1,0 +1,2 @@
+cantidad de partículas: 100 
+formato de dato: (x,y,vx,vy,m,r,idx) 
