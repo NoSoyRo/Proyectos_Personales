@@ -58,7 +58,7 @@ def cambio_de_velocidad_por_choque_entre_particulas(obj1: particula, obj2: parti
     print(f'            posiciones iniciales de {obj1.idx} es: {obj1.p}, de {obj2.idx} es: {obj2.p}')
     obj1.p = obj1.p - dt*obj1.v
     obj2.p = obj2.p - dt*obj2.v
-    print(f'            posiciones finales de {obj1.idx} es: {obj1.p}, de {obj2.idx} es: {obj2.p}')
+    print(f'            posiciones anteriores al tiempo actual de {obj1.idx} es: {obj1.p}, de {obj2.idx} es: {obj2.p}')
     deltat = dtt(obj1, obj2)
     print(f'            el tiempo que tarda en llegar a ser tangenciales es: {deltat}')
     obj1.p = obj1.p + deltat*obj1.v
@@ -81,7 +81,7 @@ def cambio_de_velocidad_por_choque_entre_particulas(obj1: particula, obj2: parti
     num2 = np.dot(obj2.v-obj1.v, obj2.p-obj1.p)
     obj1.v = obj1.v - (2*obj2.m/(sigma))*((num1)/(dist(obj1.p,obj2.p)**2))*(obj1.p-obj2.p)
     obj2.v = obj2.v - (2*obj1.m/(sigma))*((num2)/(dist(obj2.p,obj1.p)**2))*(obj2.p-obj1.p)
-    print(f'            velocidades despues de choque de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}')
+    print(f'            velocidades despues de choque de {obj1.idx} es: {obj1.v}, de {obj2.idx} es: {obj2.v}, con masas: {obj1.m} y {obj2.m}')
     tiempo_restante = dt - deltat
     obj1.p = obj1.p + tiempo_restante * obj1.v
     obj2.p = obj2.p + tiempo_restante * obj2.v
@@ -104,17 +104,12 @@ def cambio_de_velocidad_por_choque_con_pared(parti: particula,lx,ly):
         parti.v[1] = -parti.v[1]   
         print("         ¡CHOQUE CON SUELO!")
 
-def redaccion_de_texto(lista):
-    pos = open('posiciones.txt','a')
-    vel = open('velocidades.txt','a')
+def redaccion_de_texto(lista,dt,t):
+    din = open('dinamica.txt','a')
     for i in lista:
-        pos.write('('+str(tuple(i.p)[0])+';'+str(tuple(i.p)[1])+';'+str(i.idx)+')'+',')
-        vel.write('('+str(tuple(i.v)[0])+';'+str(tuple(i.v)[1])+';'+str(i.idx)+')'+',')
-    pos.write('\n')
-    vel.write('\n')
-    pos.close()
-    vel.close()
-  
+        din.write('('+str(tuple(i.p)[0])+';'+str(tuple(i.p)[1])+';'+str(tuple(i.v)[0])+';'+str(tuple(i.v)[1])+';'+str(i.m)+';'+str(i.r)+';'+str(i.idx)+')'+',')
+    din.write(f'{str(dt)}'+','+f'{str(t)}'+'\n')
+    din.close()
 
 
 ### BPT == Búsqueda de partículas traslapadas
@@ -146,6 +141,10 @@ class experimento():
         self.lp = lista_de_particulas
     def realiza_el_experimento(self, num_de_pasos, dt):
         self.dt = dt
+        din2 = open('info_util.txt', 'a')
+        din2.write(f'cantidad de partículas: {len(self.lp)} \n')
+        din2.write(f'formato de dato: (x,y,vx,vy,m,r,idx) \n')
+        din2.close()
         for i in range(num_de_pasos):
             arbol = Arbol2D(self.lp, 0)
             print(f'tiempo: {i}')
@@ -159,7 +158,7 @@ class experimento():
                     cambio_de_velocidad_por_choque_entre_particulas(j,k,self.dt)
                 cambio_de_velocidad_por_choque_con_pared(j, self.lx, self.ly)
             #despues de todos los cambios por colisiones redacto el csv
-            redaccion_de_texto(self.lp)
+            redaccion_de_texto(self.lp, self.dt, i)
             for k in self.lp:
                 k.p = k.p + self.dt*k.v   ### aqui solo cambio las posiciones con las posiciones debidas a un potencial!!!! ueuwuwuwuwuwuuwuwuwuw
                 
